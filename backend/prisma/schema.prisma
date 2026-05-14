@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -16,9 +16,9 @@ model Tenant {
   id           String   @id @default(uuid())
   name         String
   logoUrl      String?  @map("logo_url")
-  introduction String?  @db.Text
+  introduction String?
   isVerified   Boolean  @default(false) @map("is_verified")
-  settings     Json?
+  settings     String?
   
   // Relations
   users          User[]
@@ -87,7 +87,7 @@ model Teacher {
   tenantId  String  @map("tenant_id")
   campusId  String? @map("campus_id")
   name      String
-  bio       String? @db.Text
+  bio       String?
   avatarUrl String? @map("avatar_url")
   tenant    Tenant  @relation(fields: [tenantId], references: [id])
   campus    Campus? @relation(fields: [campusId], references: [id])
@@ -104,9 +104,9 @@ model Course {
   tenantId    String  @map("tenant_id")
   teacherId   String? @map("teacher_id")
   title       String
-  description String? @db.Text
+  description String?
   coverUrl    String? @map("cover_url")
-  price       Decimal @default(0.00) @db.Decimal(10, 2)
+  price       Float @default(0.00)
   tenant      Tenant  @relation(fields: [tenantId], references: [id])
   teacher     Teacher? @relation(fields: [teacherId], references: [id])
 
@@ -170,8 +170,8 @@ model GroupMember {
 model AccountBalance {
   id            String @id @default(uuid())
   tenantId      String @unique @map("tenant_id")
-  balance       Decimal @default(0.00) @db.Decimal(12, 2)
-  frozenBalance Decimal @default(0.00) @db.Decimal(12, 2) @map("frozen_balance")
+  balance       Float @default(0.00)
+  frozenBalance Float @default(0.00) @map("frozen_balance")
   tenant        Tenant @relation(fields: [tenantId], references: [id])
 
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -182,7 +182,7 @@ model AccountBalance {
 model Order {
   id         String @id @default(uuid())
   tenantId   String @map("tenant_id")
-  amount     Decimal @db.Decimal(10, 2)
+  amount     Float
   status     String @default("PENDING") // PENDING, PAID, CANCELLED, REFUNDED
   type       String // QUESTION_BANK, COURSE, SYSTEM_UPGRADE
   targetId   String? @map("target_id") // ID of the purchased item
@@ -201,7 +201,7 @@ model Invoice {
   title     String
   taxId     String? @map("tax_id")
   content   String?
-  amount    Decimal @db.Decimal(10, 2)
+  amount    Float
   status    String @default("PENDING") // PENDING, ISSUED
   order     Order @relation(fields: [orderId], references: [id])
 
@@ -216,7 +216,7 @@ model QuestionBank {
   tenantId    String @map("tenant_id")
   title       String
   description String?
-  price       Decimal @default(0.00) @db.Decimal(10, 2)
+  price       Float @default(0.00)
   isPublic    Boolean @default(false) @map("is_public")
   tenant      Tenant @relation(fields: [tenantId], references: [id])
   questions   Question[]
@@ -234,7 +234,7 @@ model AuditLog {
   userId    String? @map("user_id")
   action    String
   module    String?
-  details   String? @db.Text
+  details   String?
   ip        String?
   user      User? @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now()) @map("created_at")
@@ -245,7 +245,7 @@ model AuditLog {
 model Announcement {
   id        String @id @default(uuid())
   title     String
-  content   String @db.Text
+  content   String
   isPublic  Boolean @default(true) @map("is_public")
   publishedAt DateTime? @map("published_at")
   createdAt DateTime @default(now()) @map("created_at")
@@ -257,7 +257,7 @@ model Announcement {
 model News {
   id        String @id @default(uuid())
   title     String
-  content   String @db.Text
+  content   String
   coverUrl  String? @map("cover_url")
   publishedAt DateTime? @map("published_at")
   createdAt DateTime @default(now()) @map("created_at")
@@ -270,7 +270,7 @@ model Questionnaire {
   id        String @id @default(uuid())
   tenantId  String @map("tenant_id")
   title     String
-  content   Json // Questions structure
+  content   String // Questions structure
   tenant    Tenant @relation(fields: [tenantId], references: [id])
   responses QuestionnaireResponse[]
 
@@ -284,7 +284,7 @@ model QuestionnaireResponse {
   id              String @id @default(uuid())
   questionnaireId String @map("questionnaire_id")
   userId          String? @map("user_id")
-  content         Json // User answers
+  content         String // User answers
   questionnaire   Questionnaire @relation(fields: [questionnaireId], references: [id])
   
   createdAt       DateTime @default(now()) @map("created_at")
@@ -297,9 +297,9 @@ model QuestionnaireResponse {
 model Statistic {
   id        String @id @default(uuid())
   tenantId  String? @map("tenant_id") // Null means system-wide
-  date      DateTime @db.Date
+  date      DateTime
   metric    String // e.g., "DAU", "EXAM_COUNT", "REVENUE"
-  value     Decimal @db.Decimal(16, 2)
+  value     Float
   
   @@unique([tenantId, date, metric])
   @@map("statistics")
@@ -332,7 +332,7 @@ model Question {
   questionBankId String?      @map("question_bank_id")
   type           String       // SINGLE | MULTI | JUDGE | QA
   content        String
-  options        Json?        // 选项列表
+  options        String?        // 选项列表
   answer         String
   explanation    String?
   score          Int          @default(0)
