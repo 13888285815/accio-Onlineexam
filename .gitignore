@@ -1,0 +1,9 @@
+node_modules/
+.env
+.DS_Store
+.accio/
+frontend/.next/
+frontend/out/
+frontend/build/
+backend/node_modules/
+frontend/node_modules/

@@ -1,0 +1,379 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- 1. Tenant & Core ---
+
+model Tenant {
+  id           String   @id @default(uuid())
+  name         String
+  logoUrl      String?  @map("logo_url")
+  introduction String?  @db.Text
+  isVerified   Boolean  @default(false) @map("is_verified")
+  settings     Json?
+  
+  // Relations
+  users          User[]
+  exams          Exam[]
+  authInfo       TenantAuth?
+  albums         TenantAlbum[]
+  courses        Course[]
+  campuses       Campus[]
+  teachers       Teacher[]
+  groups         Group[]
+  questionBanks  QuestionBank[]
+  orders         Order[]
+  balance        AccountBalance?
+  questionnaires Questionnaire[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("tenants")
+}
+
+model TenantAuth {
+  id              String   @id @default(uuid())
+  tenantId        String   @unique @map("tenant_id")
+  businessLicense String?  @map("business_license")
+  idCardFront     String?  @map("id_card_front")
+  idCardBack      String?  @map("id_card_back")
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("tenant_auths")
+}
+
+model TenantAlbum {
+  id       String @id @default(uuid())
+  tenantId String @map("tenant_id")
+  imageUrl String @map("image_url")
+  title    String?
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("tenant_albums")
+}
+
+model Campus {
+  id       String @id @default(uuid())
+  tenantId String @map("tenant_id")
+  name     String
+  address  String?
+  phone    String?
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  teachers Teacher[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("campuses")
+}
+
+model Teacher {
+  id        String  @id @default(uuid())
+  tenantId  String  @map("tenant_id")
+  campusId  String? @map("campus_id")
+  name      String
+  bio       String? @db.Text
+  avatarUrl String? @map("avatar_url")
+  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  campus    Campus? @relation(fields: [campusId], references: [id])
+  courses   Course[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("teachers")
+}
+
+model Course {
+  id          String  @id @default(uuid())
+  tenantId    String  @map("tenant_id")
+  teacherId   String? @map("teacher_id")
+  title       String
+  description String? @db.Text
+  coverUrl    String? @map("cover_url")
+  price       Decimal @default(0.00) @db.Decimal(10, 2)
+  tenant      Tenant  @relation(fields: [tenantId], references: [id])
+  teacher     Teacher? @relation(fields: [teacherId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("courses")
+}
+
+// --- 2. User & Groups ---
+
+model User {
+  id           String       @id @default(uuid())
+  tenantId     String       @map("tenant_id")
+  username     String       @unique
+  email        String       @unique
+  passwordHash String       @map("password_hash")
+  role         String       @default("EXAMINEE") // ADMIN | EXAMINEE | TEACHER
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  examRecords  ExamRecord[]
+  groupMembers GroupMember[]
+  auditLogs    AuditLog[]
+  
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Group {
+  id          String @id @default(uuid())
+  tenantId    String @map("tenant_id")
+  name        String
+  description String?
+  tenant      Tenant @relation(fields: [tenantId], references: [id])
+  members     GroupMember[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id      String @id @default(uuid())
+  groupId String @map("group_id")
+  userId  String @map("user_id")
+  role    String @default("MEMBER") // LEADER, MEMBER
+  group   Group  @relation(fields: [groupId], references: [id])
+  user    User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([groupId, userId])
+  @@map("group_members")
+}
+
+// --- 3. Account & Transactions ---
+
+model AccountBalance {
+  id            String @id @default(uuid())
+  tenantId      String @unique @map("tenant_id")
+  balance       Decimal @default(0.00) @db.Decimal(12, 2)
+  frozenBalance Decimal @default(0.00) @db.Decimal(12, 2) @map("frozen_balance")
+  tenant        Tenant @relation(fields: [tenantId], references: [id])
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("account_balances")
+}
+
+model Order {
+  id         String @id @default(uuid())
+  tenantId   String @map("tenant_id")
+  amount     Decimal @db.Decimal(10, 2)
+  status     String @default("PENDING") // PENDING, PAID, CANCELLED, REFUNDED
+  type       String // QUESTION_BANK, COURSE, SYSTEM_UPGRADE
+  targetId   String? @map("target_id") // ID of the purchased item
+  invoice    Invoice?
+  tenant     Tenant @relation(fields: [tenantId], references: [id])
+  
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("orders")
+}
+
+model Invoice {
+  id        String @id @default(uuid())
+  orderId   String @unique @map("order_id")
+  title     String
+  taxId     String? @map("tax_id")
+  content   String?
+  amount    Decimal @db.Decimal(10, 2)
+  status    String @default("PENDING") // PENDING, ISSUED
+  order     Order @relation(fields: [orderId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("invoices")
+}
+
+model QuestionBank {
+  id          String @id @default(uuid())
+  tenantId    String @map("tenant_id")
+  title       String
+  description String?
+  price       Decimal @default(0.00) @db.Decimal(10, 2)
+  isPublic    Boolean @default(false) @map("is_public")
+  tenant      Tenant @relation(fields: [tenantId], references: [id])
+  questions   Question[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("question_banks")
+}
+
+// --- 4. System & CMS ---
+
+model AuditLog {
+  id        String @id @default(uuid())
+  userId    String? @map("user_id")
+  action    String
+  module    String?
+  details   String? @db.Text
+  ip        String?
+  user      User? @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
+
+model Announcement {
+  id        String @id @default(uuid())
+  title     String
+  content   String @db.Text
+  isPublic  Boolean @default(true) @map("is_public")
+  publishedAt DateTime? @map("published_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("announcements")
+}
+
+model News {
+  id        String @id @default(uuid())
+  title     String
+  content   String @db.Text
+  coverUrl  String? @map("cover_url")
+  publishedAt DateTime? @map("published_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("news")
+}
+
+model Questionnaire {
+  id        String @id @default(uuid())
+  tenantId  String @map("tenant_id")
+  title     String
+  content   Json // Questions structure
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  responses QuestionnaireResponse[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("questionnaires")
+}
+
+model QuestionnaireResponse {
+  id              String @id @default(uuid())
+  questionnaireId String @map("questionnaire_id")
+  userId          String? @map("user_id")
+  content         Json // User answers
+  questionnaire   Questionnaire @relation(fields: [questionnaireId], references: [id])
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("questionnaire_responses")
+}
+
+// --- 5. Statistics ---
+
+model Statistic {
+  id        String @id @default(uuid())
+  tenantId  String? @map("tenant_id") // Null means system-wide
+  date      DateTime @db.Date
+  metric    String // e.g., "DAU", "EXAM_COUNT", "REVENUE"
+  value     Decimal @db.Decimal(16, 2)
+  
+  @@unique([tenantId, date, metric])
+  @@map("statistics")
+}
+
+// --- 6. Exam models ---
+
+model Exam {
+  id          String       @id @default(uuid())
+  tenantId    String       @map("tenant_id")
+  title       String
+  description String?
+  startAt     DateTime?    @map("start_at")
+  endAt       DateTime?    @map("end_at")
+  duration    Int?         // 时长(分钟)
+  totalScore  Int          @default(100) @map("total_score")
+  status      String       @default("DRAFT") // DRAFT | PUBLISHED | CLOSED
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  questions   Question[]
+  records     ExamRecord[]
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@map("exams")
+}
+
+model Question {
+  id             String       @id @default(uuid())
+  examId         String?      @map("exam_id")
+  questionBankId String?      @map("question_bank_id")
+  type           String       // SINGLE | MULTI | JUDGE | QA
+  content        String
+  options        Json?        // 选项列表
+  answer         String
+  explanation    String?
+  score          Int          @default(0)
+  exam           Exam?        @relation(fields: [examId], references: [id])
+  questionBank   QuestionBank? @relation(fields: [questionBankId], references: [id])
+  userAnswers    UserAnswer[]
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@map("questions")
+}
+
+model ExamRecord {
+  id          String       @id @default(uuid())
+  userId      String       @map("user_id")
+  examId      String       @map("exam_id")
+  startedAt   DateTime     @default(now()) @map("started_at")
+  finishedAt  DateTime?    @map("finished_at")
+  score       Int?
+  status      String       @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED
+  aiFeedback  String?      @map("ai_feedback")
+  user        User         @relation(fields: [userId], references: [id])
+  exam        Exam         @relation(fields: [examId], references: [id])
+  userAnswers UserAnswer[]
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@map("exam_records")
+}
+
+model UserAnswer {
+  id          String     @id @default(uuid())
+  recordId    String     @map("record_id")
+  questionId  String     @map("question_id")
+  userContent String     @map("user_content")
+  isCorrect   Boolean?   @map("is_correct")
+  earnedScore Int?       @map("earned_score")
+  record      ExamRecord @relation(fields: [recordId], references: [id])
+  question    Question   @relation(fields: [questionId], references: [id])
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  @@map("user_answers")
+}
