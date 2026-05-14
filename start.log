@@ -1,0 +1,59 @@
+=== System Emergency Recovery & Startup ===
+[1/5] Running diagnostics...
+--- Diagnostic Tool ---
+[OK] Node.js version: 20.12.0
+[OK] Curl is installed.
+[OK] Port 3001 is available.
+[OK] Port 3002 is available.
+[OK] Database file found: /Users/zzx/Desktop/ai源码/accio/backend/prisma/dev.db
+
+Diagnostic passed! System is ready to start.
+[2/5] Checking dependencies...
+[3/5] Initializing Database & Prisma...
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (v5.22.0, engine=binary) to ./node_modules/@prisma/client in 117ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Easily identify and fix slow SQL queries in your app. Optimize helps you enhance your visibility: https://pris.ly/--optimize
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "dev.db" at "file:./dev.db"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (v5.22.0, engine=binary) to ./node_modules/@prisma/cli
+ent in 112ms
+
+[4/5] Starting services...
+Starting Backend (NestJS) in background... (Logs: backend.log)
+Waiting for backend health check...
+
+Backend is up!
+[1;32m===============================================[0m
+[1;32m   SUCCESS: Services are ready!                [0m
+[1;32m   Backend:  http://127.0.0.1:3002/api         [0m
+[1;32m   Frontend: http://127.0.0.1:3001             [0m
+[1;32m===============================================[0m
+[5/5] Starting Frontend (Next.js)...
+
+> frontend@0.1.0 dev
+> next dev -p 3001 -H 127.0.0.1 -p 3001
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://127.0.0.1:3001
+- Network:       http://127.0.0.1:3001
+✓ Ready in 411ms
+⚠ Attempted to load @next/swc-darwin-arm64, but an error occurred: dlopen(/Users/zzx/Desktop/aiæºç /accio/frontend/node_modules/@next/swc-darwin-arm64/next-swc.darwin-arm64.node, 0x0001): tried: '/Users/zzx/Desktop/aiæºç /accio/frontend/node_modules/@next/swc-darwin-arm64/next-swc.darwin-arm64.node' (code signature in <FA7DD5BE-F9CD-3EE6-880E-F0E59B12C5E1> '/Users/zzx/Desktop/aiæºç /accio/frontend/node_modules/@next/swc-darwin-arm64/next-swc.darwin-arm64.node' not valid for use in process: mapping process and mapped file (non-platform) have different Team IDs), '/System/Volumes/Preboot/Cryptexes/OS/Users/zzx/Desktop/aiæºç /accio/frontend/node_modules/@next/swc-darwin-arm64/next-swc.darwin-arm64.node' (no such file), '/Users/zzx/Desktop/aiæºç /accio/frontend/node_modules/@next/swc-darwin-arm64/next-swc.darwin-arm64.node' (code signature in <FA7DD5BE-F9CD-3EE6-880E-F0E59B12C5E1> '/Users/zzx/Desktop/aiæºç /accio/frontend/node_modules/@next/swc-darwin-arm64/next-swc.darwin-arm64.node' not valid for use in process: mapping process and mapped file (non-platform) have different Team IDs)
+⚠ Attempted to load @next/swc-wasm-nodejs, but it was not installed
+⚠ Attempted to load @next/swc-wasm-web, but it was not installed
+⨯ Failed to load SWC binary for darwin/arm64, see more info here: https://nextjs.org/docs/messages/failed-loading-swc
+⨯ Failed to load next.config.ts, see more info here https://nextjs.org/docs/messages/next-config-error
+Error: Failed to load SWC binary for darwin/arm64, see more info here: https://nextjs.org/docs/messages/failed-loading-swc
+    at ignore-listed frames
+[?25h
